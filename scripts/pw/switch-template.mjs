@@ -1,6 +1,9 @@
 #!/usr/bin/env node
-// Use Wordwall's one-click "switch template" to re-skin an existing activity
-// (great for differentiation). Low-cost, high-value.
+// Use Wordwall's one-click "switch template" to re-skin an existing activity.
+// Live-verified 2026-07-22: the "Switch template" panel is always visible on
+// the activity page sidebar (no click needed to open it) — just click the
+// target template name directly. Only a few compatible templates are listed
+// (e.g. Quiz -> Open the box/Anagram/Flash cards); "Show all" reveals more.
 // Usage: node scripts/pw/switch-template.mjs --activity-url <url> --to <template-name>
 // Flow manifest: references/flows.md
 import {
@@ -9,7 +12,6 @@ import {
   fail,
   failWithDiagnostics,
   handoff,
-  clickFirst,
 } from "../lib/session.mjs";
 
 const PLATFORM = "wordwall";
@@ -33,17 +35,29 @@ try {
     await context.close();
     process.exit(1);
   }
-  await clickFirst(page, [(p) => p.getByText(/switch template|切換模板/i)], "Switch template", 15000);
-  await clickFirst(page, [(p) => p.getByText(new RegExp(to, "i"))], `template ${to}`, 10000);
-  await page.waitForTimeout(1500);
-  ok({ switched: true, to, activityUrl: page.url(), note: "並非所有模板可互換；若目標模板未出現在清單即代表不支援。" });
-} catch (err) {
-  const msg = String(err?.message ?? err);
-  if (msg.startsWith("selector-failure")) {
-    await handoff(PLATFORM, page, msg, { hint: "找不到切換模板選項，或目標模板不可互換。請老師在活動頁手動 Switch template。" });
-  } else {
-    await failWithDiagnostics(PLATFORM, page, msg, "切換模板失敗。請確認登入狀態後重試一次。");
+
+  const panel = page.getByText(/^switch template$/i);
+  await panel.waitFor({ state: "visible", timeout: 15000 });
+
+  let target = page.getByText(new RegExp(`^${to}$`, "i"));
+  if ((await target.count()) === 0) {
+    // Not in the default shortlist — expand "Show all" and retry.
+    await page.getByText(/^show all$/i).click();
+    target = page.getByText(new RegExp(`^${to}$`, "i"));
   }
+  if ((await target.count()) === 0) {
+    await handoff(PLATFORM, page, "template-not-switchable", {
+      hint: `「${to}」不在此活動可切換的模板清單中（並非所有模板互通）。請老師在側邊 Switch template 面板人工確認可用選項。`,
+    });
+    await context.close();
+    process.exit(1);
+  }
+
+  await target.first().click();
+  await page.waitForTimeout(1500);
+  ok({ switched: true, to, activityUrl: page.url() });
+} catch (err) {
+  await failWithDiagnostics(PLATFORM, page, String(err?.message ?? err), "切換模板失敗。請確認登入狀態後重試一次。");
 } finally {
   await context.close();
 }

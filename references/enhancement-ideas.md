@@ -2,6 +2,8 @@
 
 > ⚠️ **勘誤**：第一輪記錄的「quiz 編輯器頂部『人工智慧動作』：添加類似問題／新增答案說明／翻譯測驗」**其實是 Wayground 的功能，誤植到本文件**。第二輪已在 Wordwall 實際進入 `Edit content` 畫面核對，該畫面只有一個 disabled 的「Generate With AI」按鈕，**沒有**這種多動作選單。相同的 AI 面板構想已正確歸檔到 tw-wayground-skill 的 enhancement-ideas.md。
 
+> ✅ **v0.2.0 已完成**：新增 `get-results.mjs`（唯讀 My Results，中價值 #3）、`preflight.mjs`、`run.mjs`（一鍵串接）。`create-activity.mjs` 非-quiz 模板改用 leaf-input 依序填策略（match_up 編輯器結構已 live 驗證）。Generate With AI 確認免費帳號鎖定，不列入自動化。
+
 ## 高價值
 
 1. **更多模板支援**（create-activity.mjs 目前只驗證 quiz；官方共 18 種免費模板）

@@ -15,6 +15,17 @@ cd <skill-dir> && npm install && npx playwright install chromium
 
 只在 `node_modules/` 不存在時執行。
 
+## 一鍵流程（推薦）
+
+先 `node scripts/preflight.mjs` 確認依賴已裝、老師已登入。再用串接器一次跑完，中間只停在「指派前確認」：
+
+```bash
+node scripts/run.mjs input.json --stage prepare --template quiz            # 建活動+代填，回傳 activityUrl
+node scripts/run.mjs input.json --stage deliver --activity-url <url> --named false   # 設定指派
+```
+
+唯讀查詢學生完成度：`node scripts/pw/get-results.mjs`。下方單支腳本用於需要細部控制時。
+
 ## 工作流程
 
 1. **產生貼上內容（必經）**：

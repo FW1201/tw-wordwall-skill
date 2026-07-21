@@ -115,51 +115,72 @@ try {
     await titleInput.fill(title);
   }
 
-  // Each question/row lives in its own `.js-item` container. The template
-  // starts with exactly one empty item; add more with `.js-editor-add-item`
-  // (page-scoped — always appends at the end).
-  const questionBoxes = () => page.locator(".js-item");
+  // Two structurally different editor families (live-verified 2026-07-22):
+  //  - QUIZ: each question is its own `.js-item` box holding a prompt input +
+  //    per-answer inputs, grown with `.js-editor-add-answer`, with per-answer
+  //    `.js-question-check` correct-answer toggles. Starts with one empty item;
+  //    add more questions with `.js-editor-add-item`.
+  //  - FLAT-CELL (match_up/anagram/open_the_box/group_sort): `.js-item` is
+  //    NESTED (collection wrapper > rows > cells), there is NO
+  //    `.js-editor-add-answer`, and cells are just leaf `.js-item-input`
+  //    fields. Match up verified: leaf inputs are ordered row-by-row then
+  //    left-to-right — i.e. exactly the flattened [term, definition, ...]
+  //    order. Fill the leaf inputs in document order; grow rows with
+  //    `.js-editor-add-item` until enough cells exist (robust to each
+  //    template's default row count). match_up is verified; the other flat
+  //    templates reuse the same shape but stay `experimental`.
+  if (template === "quiz") {
+    const questionBoxes = () => page.locator(".js-item");
+    for (let i = 0; i < items.length; i += 1) {
+      if (i > 0) {
+        const addItem = page.locator(".js-editor-add-item").first();
+        await addItem.waitFor({ state: "visible", timeout: 8000 });
+        await addItem.click();
+      }
+      const box = questionBoxes().nth(i);
+      await box.waitFor({ state: "visible", timeout: 8000 });
 
-  for (let i = 0; i < items.length; i += 1) {
-    if (i > 0) {
-      const addItem = page.locator(".js-editor-add-item").first();
-      await addItem.waitFor({ state: "visible", timeout: 8000 });
-      await addItem.click();
-    }
-    const box = questionBoxes().nth(i);
-    await box.waitFor({ state: "visible", timeout: 8000 });
+      const cellTexts = [items[i].prompt, ...items[i].answers];
+      for (let want = 1; want <= cellTexts.length; want += 1) {
+        const have = await box.locator(".js-item-input").count();
+        if (have < want) {
+          const addAnswer = box.locator(".js-editor-add-answer").first();
+          await addAnswer.waitFor({ state: "visible", timeout: 5000 });
+          await addAnswer.click();
+        }
+      }
 
-    const cellTexts = items[i].prompt !== undefined ? [items[i].prompt, ...items[i].answers] : items[i].texts;
+      const fields = box.locator(".js-item-input");
+      for (let c = 0; c < cellTexts.length; c += 1) {
+        const value = cellTexts[c];
+        if (value === undefined || value === "") continue;
+        await fields.nth(c).click();
+        await page.keyboard.type(String(value));
+      }
 
-    // Ensure enough `.js-item-input` fields exist in this box (1 prompt + N
-    // answers, or N flat cells for non-quiz templates); add via the box's own
-    // "add answer" control when short.
-    for (let want = 1; want <= cellTexts.length; want += 1) {
-      const have = await box.locator(".js-item-input").count();
-      if (have < want) {
-        const addAnswer = box.locator(".js-editor-add-answer").first();
-        await addAnswer.waitFor({ state: "visible", timeout: 5000 });
-        await addAnswer.click();
+      if (items[i].correctIndex !== undefined && items[i].correctIndex >= 0) {
+        const checks = box.locator(".js-question-check");
+        const have = await checks.count();
+        if (items[i].correctIndex < have) {
+          await checks.nth(items[i].correctIndex).click();
+        }
       }
     }
-
-    const fields = box.locator(".js-item-input");
-    for (let c = 0; c < cellTexts.length; c += 1) {
-      const value = cellTexts[c];
+  } else {
+    // Flat-cell templates: fill leaf `.js-item-input` cells in document order.
+    const flatCells = items.flatMap((it) => it.texts);
+    let guard = 0;
+    while ((await page.locator(".js-item-input").count()) < flatCells.length && guard < 60) {
+      await page.locator(".js-editor-add-item").first().click({ timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(250);
+      guard += 1;
+    }
+    const inputs = page.locator(".js-item-input");
+    for (let c = 0; c < flatCells.length; c += 1) {
+      const value = flatCells[c];
       if (value === undefined || value === "") continue;
-      await fields.nth(c).click();
+      await inputs.nth(c).click();
       await page.keyboard.type(String(value));
-    }
-
-    // Mark the correct answer (quiz only). `.js-question-check` toggles are
-    // ordered per-answer within this box; index 0 corresponds to answer 1
-    // (field index 1, since field 0 is the question prompt).
-    if (items[i].correctIndex !== undefined && items[i].correctIndex >= 0) {
-      const checks = box.locator(".js-question-check");
-      const have = await checks.count();
-      if (items[i].correctIndex < have) {
-        await checks.nth(items[i].correctIndex).click();
-      }
     }
   }
 

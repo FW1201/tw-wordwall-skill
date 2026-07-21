@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/logo.png" width="88" alt="Wordwall logo"></p>
+
 # tw-wordwall-skill
 
 > ⚠️ **非官方工具**：本套件**不是** Wordwall 官方產品，也**非**其認可的整合。Wordwall 無內容創建/批次匯入 API，故本套件以 Playwright 在**老師自己的可見編輯器 session** 內逐項代填（是「手動輸入加速」，非抓取或繞過），受 Wordwall 服務條款約束。請以老師本人帳號、由本人完成登入，操作自己的內容，風險自負。
@@ -56,6 +58,7 @@ node scripts/run.mjs input.json --stage deliver \
 
 - 這是四平台中選擇器最脆弱者：`.txt` 手動貼入為保底路徑，代填僅在老師明確要求時使用；選擇器失敗立即停止並交還人工。
 - 登入/MFA 親自完成；指派前 agent 需在對話中確認；cookies 只存本機 Chromium profile。
+- **代填功能需在本機、有螢幕的互動式 agent session 執行**；雲端背景任務/遠端無頭 sandbox/CI 無法顯示瀏覽器視窗，不適用（`.txt` 手動貼入不受此限制）。
 
 ## Playwright 流程狀態
 

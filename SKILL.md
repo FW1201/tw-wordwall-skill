@@ -1,6 +1,6 @@
 ---
 name: tw-wordwall-skill
-description: Use when a teacher wants to build a Wordwall activity — 產生 Wordwall 逐題貼上內容（quiz/配對/字謎/分組/開箱轉盤）、查詢已發布活動 oEmbed、自動代填題目、設定記名指派並取得連結。Triggers include Wordwall, 配對遊戲, match up, 字謎, 分組, 指派連結, quiz.json.
+description: Use when a teacher wants to build a Wordwall activity — 產生 Wordwall 逐題貼上內容（quiz/配對/字謎/分組/開箱轉盤）、查詢已發布活動 oEmbed、自動代填題目、設定記名指派並取得連結。Triggers include Wordwall, 配對遊戲, match up, 字謎, 分組, 指派連結, input.json.
 ---
 
 # tw-wordwall-skill
@@ -14,6 +14,8 @@ cd <skill-dir> && npm install && npx playwright install chromium
 ```
 
 只在 `node_modules/` 不存在時執行。
+
+⚠️ **執行環境**：自動代填功能開啟**可見（headed）瀏覽器**供老師登入，需在**本機、有螢幕的互動式 agent session**執行（Claude Code CLI/Desktop、Codex CLI、OpenCode 終端機皆可）。**雲端背景任務/遠端無頭 sandbox/CI（如 Codex Cloud tasks）無法顯示瀏覽器視窗，登入步驟會卡住或失敗**——請改在本機互動式 session 執行；`.txt` 手動貼入路徑不受此限制。
 
 ## 一鍵流程（推薦）
 

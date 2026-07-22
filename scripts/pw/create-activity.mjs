@@ -16,6 +16,8 @@ import {
   failWithDiagnostics,
   handoff,
   clickFirst,
+  waitForCondition,
+  assertPlatformAuthenticated,
 } from "../lib/session.mjs";
 
 const PLATFORM = "wordwall";
@@ -92,11 +94,7 @@ const experimental = template !== "quiz";
 const { context, page } = await openSession(PLATFORM);
 try {
   await page.goto("https://wordwall.net/create", { waitUntil: "domcontentloaded" });
-  if (/\/login/i.test(page.url())) {
-    fail("not-logged-in", "尚未登入 Wordwall。請先執行 node scripts/pw/login.mjs。");
-    await context.close();
-    process.exit(1);
-  }
+  await assertPlatformAuthenticated(page, PLATFORM);
 
   // Cookie consent banner (verified 2026-07-22): dismiss with "Reject all",
   // the more privacy-preserving choice. Not fatal if absent (already dismissed).
@@ -171,11 +169,19 @@ try {
     const flatCells = items.flatMap((it) => it.texts);
     let guard = 0;
     while ((await page.locator(".js-item-input").count()) < flatCells.length && guard < 60) {
-      await page.locator(".js-editor-add-item").first().click({ timeout: 5000 }).catch(() => {});
-      await page.waitForTimeout(250);
+      const before = await page.locator(".js-item-input").count();
+      await page.locator(".js-editor-add-item").first().click({ timeout: 5000 });
+      await waitForCondition(
+        async () => (await page.locator(".js-item-input").count()) > before,
+        { timeoutMs: 10000, intervalMs: 100, description: "wordwall-flat-cell-row-added" },
+      );
       guard += 1;
     }
     const inputs = page.locator(".js-item-input");
+    const inputCount = await inputs.count();
+    if (inputCount < flatCells.length) {
+      throw new Error(`input-count-mismatch: expected ${flatCells.length}, found ${inputCount}`);
+    }
     for (let c = 0; c < flatCells.length; c += 1) {
       const value = flatCells[c];
       if (value === undefined || value === "") continue;

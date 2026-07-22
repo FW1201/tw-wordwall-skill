@@ -12,6 +12,7 @@ import {
   fail,
   failWithDiagnostics,
   handoff,
+  assertPlatformAuthenticated,
 } from "../lib/session.mjs";
 
 const PLATFORM = "wordwall";
@@ -35,11 +36,7 @@ if (deadline && !/^\d{2}\/\d{2}\/\d{4}$/.test(deadline)) {
 const { context, page } = await openSession(PLATFORM);
 try {
   await page.goto(activityUrl, { waitUntil: "domcontentloaded" });
-  if (/\/login/i.test(page.url())) {
-    fail("not-logged-in", "尚未登入 Wordwall。請先執行 node scripts/pw/login.mjs。");
-    await context.close();
-    process.exit(1);
-  }
+  await assertPlatformAuthenticated(page, PLATFORM);
 
   const setAssignmentLink = page.getByText(/^set assignment$/i).first();
   await setAssignmentLink.waitFor({ state: "visible", timeout: 15000 });

@@ -18,8 +18,11 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { createRunState, inputFingerprint } from "./lib/session.mjs";
+import { createTrackedRunner } from "./lib/browser-core/orchestrator.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+const PLATFORM = "wordwall";
 
 function arg(name) {
   const i = process.argv.indexOf(`--${name}`);
@@ -28,6 +31,9 @@ function arg(name) {
 function out(obj) {
   console.log(JSON.stringify(obj));
 }
+
+let runState;
+const runTracked = createTrackedRunner({ here: HERE, platform: PLATFORM, getState: () => runState });
 
 function runScript(relPath, args) {
   const res = spawnSync(process.execPath, [path.join(HERE, relPath), ...args], {
@@ -71,7 +77,8 @@ try {
   if (stage === "prepare") {
     const template = arg("template") ?? "quiz";
     const title = input.title ?? "Untitled";
-    const created = runScript("pw/create-activity.mjs", [
+    runState = await createRunState(PLATFORM, { id: "wordwall-prepare", version: 1 }, inputFingerprint(input));
+    const created = await runTracked("create-activity", "pw/create-activity.mjs", [
       inputPath,
       "--template",
       template,
@@ -86,6 +93,7 @@ try {
     out({
       ok: true,
       stage: "prepare",
+      runId: runState.runId,
       activityUrl: created.activityUrl,
       title,
       template,
@@ -111,7 +119,8 @@ try {
   const deadline = arg("deadline");
   if (deadline) assignArgs.push("--deadline", deadline);
 
-  const assigned = runScript("pw/set-assignment.mjs", assignArgs);
+  runState = await createRunState(PLATFORM, { id: "wordwall-deliver", version: 1 }, inputFingerprint({ activityUrl, named, deadline }));
+  const assigned = await runTracked("set-assignment", "pw/set-assignment.mjs", assignArgs);
   if (!assigned.ok) {
     out({ ok: false, stage, step: "set-assignment", activityUrl, ...assigned });
     process.exit(1);
@@ -120,6 +129,7 @@ try {
   out({
     ok: true,
     stage: "deliver",
+    runId: runState.runId,
     activityUrl,
     assignmentUrl: assigned.assignmentUrl,
     note: "完整鏈完成。把 assignmentUrl 交給學生即可。",

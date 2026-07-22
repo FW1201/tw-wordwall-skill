@@ -17,18 +17,29 @@ if (!existsSync(new URL("../node_modules/playwright", import.meta.url))) {
   process.exit(1);
 }
 
-const { openSession } = await import("./lib/session.mjs");
+const { openSession, inspectAuth, gotoReady, authManifest } = await import("./lib/session.mjs");
 const PLATFORM = "wordwall";
+const AUTH = authManifest({
+  entryUrl: "https://wordwall.net/create",
+  loginUrls: [/wordwall\.net\/login/i],
+  authenticatedUrlPatterns: [/wordwall\.net\/(myactivities|community|create)/i],
+  authenticatedLocators: [(p) => p.getByText(/create|my activities|我的活動|建立/i)],
+});
 
-const { context, page } = await openSession(PLATFORM);
+let context;
+let page;
 try {
-  await page.goto("https://wordwall.net/create", { waitUntil: "domcontentloaded" });
-  const loggedIn = !/\/login/i.test(page.url());
+  ({ context, page } = await openSession(PLATFORM));
+  await gotoReady(page, "https://wordwall.net/create", { timeoutMs: 30000 });
+  const auth = await inspectAuth(page, AUTH);
+  const loggedIn = auth.state === "authenticated";
   if (loggedIn) {
     console.log(
       JSON.stringify({
         ok: true,
         loggedIn: true,
+        authState: auth.state,
+        checkedUrl: auth.url,
         note: "已登入，可直接執行 node scripts/run.mjs <input.json> --stage prepare。",
       }),
     );
@@ -37,6 +48,8 @@ try {
       JSON.stringify({
         ok: false,
         error: "not-logged-in",
+        authState: auth.state,
+        checkedUrl: auth.url,
         loggedIn: false,
         hint: "尚未登入 Wordwall。請先執行 node scripts/pw/login.mjs，由老師本人完成登入，再重跑 preflight。",
       }),
@@ -53,5 +66,5 @@ try {
   );
   process.exitCode = 1;
 } finally {
-  await context.close();
+  await context?.close();
 }

@@ -64,6 +64,27 @@ node scripts/run.mjs input.json --stage deliver \
 
 `references/flows.md` 記錄步驟與成功證據；quiz/match_up 以外模板標記 experimental。
 
+## Browser Core v1
+
+Playwright flows now use an isolated per-platform profile lock, a URL + DOM
+authentication check, condition-based waits, run-state journals, classified
+selector failures, and local redacted diagnostics. Flat-cell editors verify
+input counts and grow rows by condition rather than fixed sleeps. An ambiguous
+external write returns `resumeUrl` and must not be retried automatically.
+
+Run local checks with:
+
+```bash
+npm test
+npm run check:browser-core
+```
+
+Validation boundaries and the latest readonly canary result are recorded in
+`docs/browser-core-validation.md`.
+
+Computer Use is a manual fallback for login/MFA/CAPTCHA or selector drift; it
+does not replace deterministic success evidence or external-write gates.
+
 ## License
 
 MIT

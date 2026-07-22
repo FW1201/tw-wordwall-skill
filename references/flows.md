@@ -30,9 +30,11 @@
 - success evidence: 指派連結（wordwall.net/play|resource）
 - 擷取不到 → assignment-link-not-found handoff
 - last-verified: PENDING
+- capability-status: pending（external assignment link and duplicate-write recovery require live canary）
 
 ## Flow: switch template
 
 - entry: activity URL；步驟：Switch template → 選目標模板
 - 已知限制：非所有模板可互換（目標未出現即不支援）
 - last-verified: PENDING
+- capability-status: pending（template-switch completion evidence and resume behavior require live canary）

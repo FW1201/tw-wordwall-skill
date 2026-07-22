@@ -12,6 +12,8 @@ import {
   fail,
   failWithDiagnostics,
   handoff,
+  waitForCondition,
+  assertPlatformAuthenticated,
 } from "../lib/session.mjs";
 
 const PLATFORM = "wordwall";
@@ -30,11 +32,7 @@ if (!activityUrl || !to) {
 const { context, page } = await openSession(PLATFORM);
 try {
   await page.goto(activityUrl, { waitUntil: "domcontentloaded" });
-  if (/\/login/i.test(page.url())) {
-    fail("not-logged-in", "尚未登入 Wordwall。請先執行 node scripts/pw/login.mjs。");
-    await context.close();
-    process.exit(1);
-  }
+  await assertPlatformAuthenticated(page, PLATFORM);
 
   const panel = page.getByText(/^switch template$/i);
   await panel.waitFor({ state: "visible", timeout: 15000 });
@@ -53,8 +51,25 @@ try {
     process.exit(1);
   }
 
+  const beforeUrl = page.url();
   await target.first().click();
-  await page.waitForTimeout(1500);
+  const switched = await waitForCondition(
+    page,
+    async () => {
+      if (page.url() !== beforeUrl) return true;
+      const bodyText = await page.locator("body").innerText().catch(() => "");
+      return /saved|updated|已儲存|已更新|template switched/i.test(bodyText);
+    },
+    { timeoutMs: 15000, intervalMs: 300 },
+  );
+  if (!switched) {
+    await handoff(PLATFORM, page, "template-switch-ambiguous", {
+      to,
+      hint: "模板切換按鈕已點擊，但未取得 URL 或頁面狀態變化證據；請人工確認後再繼續，避免重複切換。",
+    });
+    await context.close();
+    process.exit(1);
+  }
   ok({ switched: true, to, activityUrl: page.url() });
 } catch (err) {
   await failWithDiagnostics(PLATFORM, page, String(err?.message ?? err), "切換模板失敗。請確認登入狀態後重試一次。");

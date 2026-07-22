@@ -10,16 +10,18 @@ Wordwall 無批次匯入 API——每個項目都要在編輯器逐一輸入。�
 ## 首次使用
 
 ```bash
-cd <skill-dir> && npm install && npx playwright install chromium
+cd <skill-dir> && npm install
+npm run browser:start
+npm run browser:status
 ```
 
 只在 `node_modules/` 不存在時執行。
 
-⚠️ **執行環境**：自動代填功能開啟**可見（headed）瀏覽器**供老師登入，需在**本機、有螢幕的互動式 agent session**執行（Claude Code CLI/Desktop、Codex CLI、OpenCode 終端機皆可）。**雲端背景任務/遠端無頭 sandbox/CI（如 Codex Cloud tasks）無法顯示瀏覽器視窗，登入步驟會卡住或失敗**——請改在本機互動式 session 執行；`.txt` 手動貼入路徑不受此限制。
+⚠️ **執行環境**：自動代填透過 CDP 連接教育平台專用正常 Chrome。Google OAuth/MFA 必須由老師在 Skill detach 後親自完成；`.txt` 手動貼入路徑不受此限制。
 
 ## 一鍵流程（推薦）
 
-先 `node scripts/preflight.mjs` 確認依賴已裝、老師已登入。再用串接器一次跑完，中間只停在「指派前確認」：
+先執行 `npm run browser:start`，完成兩階段 login，再跑 preflight。串接器中間只停在「指派前確認」：
 
 ```bash
 node scripts/run.mjs input.json --stage prepare --template quiz            # 建活動+代填，回傳 activityUrl
@@ -37,7 +39,7 @@ node scripts/run.mjs input.json --stage deliver --activity-url <url> --named fal
    input.json = `{title?, quiz?, pairs?, words?, groups?}`（也可直接餵裸 quiz.json，會自動包成 `{quiz}`）。輸出 `csvPath`/`txtPath`/`warnings`——**warnings 一定轉述**。`.txt` 就是老師手動貼入的預設路徑。
    ⚠️ **match_up 從 quiz 自動推導時，term＝整段題幹、definition＝第一個正解**，配對常不精煉。若老師在意品質，請引導改用明確的 `pairs`（`[{term,definition}]`）再重跑。
 2. **（可選）自動代填**——**Wordwall 編輯器選擇器極易改版，只在老師明確要求自動填入時才用**：
-   - 登入：`node scripts/pw/login.mjs`（timeout ≥360000ms）。
+   - 登入：`npm run browser:start` → `node scripts/pw/login.mjs` → 老師在專用正常 Chrome 完成 OAuth/MFA → 重跑 login/preflight。
    - 建活動：`node scripts/pw/create-activity.mjs input.json --template quiz --title "..."`。v1 驗證 **quiz、match_up**；group_sort/anagram/open_the_box 標記 `experimental`（回報時提醒老師覆核）。
 3. **設定指派（外部寫入，先確認記名與期限）**：用 `create-activity.mjs` 輸出的 `activityUrl`。
    ```bash
@@ -62,6 +64,8 @@ node scripts/run.mjs input.json --stage deliver --activity-url <url> --named fal
 | 症狀 | 處理 |
 |---|---|
 | `not-logged-in` | 先跑 `scripts/pw/login.mjs` |
+| `cdp-unavailable` | 先跑 `npm run browser:start`，保持該正常 Chrome 開啟 |
+| `oauth-browser-rejected` | 關閉舊 automated Chromium；在專用正常 Chrome 重新登入 |
 | `editor-selector-failure` | Wordwall 改版；改用 `.txt` 人工貼入 |
 | `no-content` | input.json 缺該模板所需欄位；先用 build-content.mjs 檢視 |
 | schema 驗證失敗 | hint 點名壞欄位；轉譯給老師，不貼原始 zod |

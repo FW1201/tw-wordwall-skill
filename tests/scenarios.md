@@ -1,27 +1,18 @@
-# 測試情境（superpowers:writing-skills TDD）
+# 測試情境（產生器正確性——2026-07-23 大型縮減後改寫）
 
-## RED baseline（無 skill，沿用前三平台觀察）
+本文件原本記錄 Playwright 瀏覽器自動化的 RED/GREEN/REFACTOR TDD 過程（登入、代填、指派）。該自動化層已整個移除（見 README「為什麼沒有瀏覽器自動化」），歷史脈絡保留在 git log，不在此重述。
 
-情境：「做一個 Wordwall 配對遊戲並設定記名指派給我連結。」
-預期 baseline 失敗：agent 手刻 CSV、不知 Wordwall 無匯入 API、無 session、無法自動指派、每項需手動輸入。
+現在 `build-content.mjs` 是唯一產品面，測試情境改為關注**產生器對官方規範的正確性**，可執行測試見 `tests/build-content.test.mjs`（`npm test` 執行，node:test + node:assert，無需瀏覽器/帳號）。
 
-→ skill 必須提供：可靠的逐題內容轉換（含 warnings）、oEmbed 讀取、脆弱但可用的代填/指派自動化、且明確標示脆弱性與 .txt 退路。
+## 涵蓋情境
 
-## GREEN 驗證情境（安裝 skill 後）
+1. **quiz/match_up（已驗證模板）**：對合法 fixture 產生內容時不應有非預期 warnings；`experimental` 應為 `false`。
+2. **true_false**：正確從 `options` 推導 True/False；沒有正解時要有明確 warning，不可靜默輸出空答案。
+3. **alias 模板（matching_pairs/find_the_match/flash_cards/speaking_cards）**：內容 shape 必須與其對應的已驗證模板逐位元組相同（複用同一段邏輯，不重複實作）；但 `experimental` 一律為 `true`——**這是本輪修過的一個真實 bug**：先前誤用「內容 shape 來源」判斷 verified 狀態，導致 alias 模板被誤標為已驗證，已改成檢查使用者實際要求的模板名稱。
+4. **complete_the_sentence**：題幹含 `___`/`[blank]` 且有正解時才產生內容；沒有空格標記的題目要被跳過並給出具體 warning，不可誤判。
+5. **CSV escaping**：欄位含逗號/雙引號時要正確加雙引號並跳脫內部引號（RFC4180 風格）。
+6. **empty input**：所有欄位皆為 optional，空物件應能通過 schema 驗證，但 `buildWordwallContent` 應在該模板缺內容時給出 `requires ...` 的 warning，而不是靜默輸出空檔案又回報成功。
 
-S1（轉換）：quiz.json → match_up 內容，轉述 warnings（無正解題被跳過）。
-S2（完整鏈規劃）：login → create-activity（提醒代填脆弱、只到 Done）→ set-assignment（先確認記名/期限）→ assignmentUrl。
-S3（負向）：壞 input.json / 缺該模板內容 → 點名欄位的 hint。
+## 何時要補測試
 
-## GREEN 結果（2026-07-21）
-
-- S1：PASS —— build-content.mjs 對 quiz.json 產出 match_up 內容，正確跳過無正解題並列 warning。
-- S3：PASS —— 空/壞 input 得到 no-content 或 schema hint。
-- S2：需真實帳號 live 驗證（flows.md last-verified: PENDING）；SKILL.md 已把「代填脆弱、預告老師、.txt 退路」列為硬規則。
-
-## REFACTOR（依 GREEN 回饋修補，2026-07-21）
-
-1. build-content.mjs 自動包裹裸 Quiz（頂層有 questions 即 wrap 成 {quiz}），SKILL.md「可直接餵 quiz.json」不再誤導。
-2. SKILL.md 補 match_up 自動推導的品質限制（題幹當 term），引導老師優先給 pairs。
-3. 澄清 set-assignment 的 --activity-url 來自 create-activity，且 Wordwall Done 後即可指派（無獨立發布步驟），消除串接斷鏈疑慮。
-4. switch-template 的 --to 是畫面顯示標籤（如 "Match up"），與 build-content 的內部 template key（match_up）用途不同，屬預期差異。
+擴充 `TEMPLATES`／新增 `ALIAS_OF` 項目時，`build-content.test.mjs` 至少要補一組「shape 與來源模板一致」+「experimental 仍為 true（除非真的重新 live 驗證過）」的測試，避免重蹈上面第 3 點的 bug。

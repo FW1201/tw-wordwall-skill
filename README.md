@@ -2,94 +2,46 @@
 
 # tw-wordwall-skill
 
-> ⚠️ **非官方工具**：本套件**不是** Wordwall 官方產品，也**非**其認可的整合。Wordwall 無內容創建/批次匯入 API，故本套件以 Playwright 在**老師自己的可見編輯器 session** 內逐項代填（是「手動輸入加速」，非抓取或繞過），受 Wordwall 服務條款約束。請以老師本人帳號、由本人完成登入，操作自己的內容，風險自負。
+> ⚠️ **非官方工具**：本套件**不是** Wordwall 官方產品，也**非**其認可的整合。Wordwall 沒有內容創建/批次匯入 API，本套件只產生老師可以直接貼上/匯入 Wordwall 編輯器的檔案，不做任何瀏覽器自動化或登入。
 
-台灣 K-12 教師用的 Wordwall agent skill：一句話就能把題目 JSON 一路做到「建立活動 → 逐題代填 → 設定指派 → 回傳指派連結」，並可一鍵換模板做差異化、唯讀查詢學生完成度。
+台灣 K-12 教師用的 Wordwall agent skill：一句話把題目 JSON 轉成 Wordwall 逐模板貼上就緒的 `.csv`/`.txt`，老師自行到 wordwall.net 建立活動、發布、設定指派。
 
 自 [edu-agent-kit](https://github.com/FW1201/edu-agent-kit) 的 Wordwall adapter 獨立而來（來源 commit `a7eaa0f`）。
 
 ## 這套 skill 能做什麼
 
-老師把題目給 agent，agent 就能：建立活動並代填題目（quiz 已完整驗證）→ 設定指派（記名/期限）→ 回傳 `wordwall.net/play/...` 連結。也能一鍵把同一份內容換成別的遊戲模板，或唯讀讀取「My Results」的完成度。
+老師把題目給 agent，agent 產生對應模板的貼上內容檔案（quiz/配對/字謎/分組/開箱轉盤/是非題/完成句子…共 10 種模板），附上完整度警告（哪些題目因欄位不足被略過），老師拿著檔案登入 Wordwall 自行貼入、發布、設定指派。
 
-唯二人工點：**登入**、**指派前確認**。
-
-## 快速上手（一鍵流程，推薦）
+## 快速上手
 
 ```bash
-cd <skill-dir> && npm install                               # 首次
-npm run browser:start                                       # 啟動教育平台專用「正常 Chrome」
-npm run browser:status                                      # 確認 CDP 已可連線
-node scripts/pw/login.mjs                                   # 第一次開登入頁後立即 handoff
-# 在保持開啟的正常 Chrome 完成 Google 登入／MFA，然後：
-node scripts/pw/login.mjs && node scripts/preflight.mjs
-node scripts/run.mjs input.json --stage prepare --template quiz   # 建活動+代填，回傳 activityUrl
-# ⇧ agent 跟老師確認是否記名/期限後：
-node scripts/run.mjs input.json --stage deliver \
-  --activity-url <activityUrl> --named false               # 設定指派，回傳連結
+cd <skill-dir> && npm install                                        # 首次
+node scripts/build-content.mjs input.json --template quiz --out-dir out/
 ```
 
-> `input.json` 需符合 `WordwallContentInput`（`quiz.questions[]` / `pairs[]` / `words[]` / `groups[]`）；可先用 `build-content.mjs` 檢視轉換結果。
+> `input.json` 需符合 `WordwallContentInput`（`quiz.questions[]` / `pairs[]` / `words[]` / `groups[]` / `sentences[]`）；也可直接餵裸 quiz.json。
 
 ## 自然指令範例
 
 | 老師說 | 觸發 |
 |---|---|
-| 「把這 10 題做成 Wordwall 測驗、設定匿名指派給我連結」 | `run.mjs … --template quiz` + `--named false` |
-| 「做一個配對遊戲」 | `create-activity.mjs --template match_up` |
-| 「同一份內容幫我換成 Match up」 | `switch-template.mjs --to "Match up"` |
-| 「學生做了多少？」 | `get-results.mjs`（唯讀） |
+| 「把這 10 題轉成 Wordwall 測驗貼上內容」 | `build-content.mjs --template quiz` |
+| 「做一個配對遊戲的內容」 | `build-content.mjs --template match_up` |
+| 「幫我做是非題版本」 | `build-content.mjs --template true_false` |
+| 「查一下這個已發布活動的資訊」 | `get-oembed.mjs`（唯讀） |
 
 ## 功能總覽
 
 | 腳本 | 用途 | 輸入 | 輸出 |
 |---|---|---|---|
-| `scripts/preflight.mjs` | 前置檢查（依賴/登入） | — | `{loggedIn}` |
-| `scripts/run.mjs` | **一鍵串接器**（prepare/deliver） | `input.json` | activityUrl / 指派連結 |
-| `scripts/build-content.mjs` | 產生貼上用 `.csv`/`.txt`（五模板） | `input.json` | 檔案 + warnings |
+| `scripts/build-content.mjs` | 產生貼上用 `.csv`/`.txt`（10 種模板） | `input.json` | 檔案 + warnings + experimental |
 | `scripts/get-oembed.mjs` | 讀已發布活動 oEmbed（唯讀、免登入） | `<url>` | oEmbed |
-| `scripts/pw/login.mjs` | 可見視窗登入 | — | 登入狀態 |
-| `scripts/pw/create-activity.mjs` | 代填題目建活動 | `<input.json> --template --title` | activityUrl |
-| `scripts/pw/set-assignment.mjs` | Set Assignment 取得指派連結 | `--activity-url [--named][--deadline]` | assignmentUrl |
-| `scripts/pw/switch-template.mjs` | 一鍵換模板（差異化） | `--activity-url --to` | 切換結果 |
-| `scripts/pw/get-results.mjs` | **唯讀**讀取 My Results 完成度 | `[--limit N]` | 結果清單 |
 
-模板支援：**quiz 已完整驗證**。`match_up` 的編輯器結構已 live 驗證（巢狀 pair-row + leaf `.js-item-input`，與 quiz 不同），已用「依序填 leaf cell」策略實作；`group_sort`/`anagram`/`open_the_box` 沿用同策略但仍 `experimental`，請老師覆核。（Wordwall 的 Generate With AI 對免費帳號為鎖定狀態，不列入自動化。）
+模板支援：**quiz、match_up 已完整驗證**（曾以真實登入帳號測過編輯器）；`anagram`/`group_sort`/`open_box_or_wheel` 沿用既有格式；`true_false`/`matching_pairs`/`find_the_match`/`flash_cards`/`speaking_cards`/`complete_the_sentence` 是本輪新增，內容形狀與已驗證模板相同但標記 `experimental`，請老師貼入後核對。
 
-## 自動化邊界（ToS 風險控管）
+## 為什麼沒有瀏覽器自動化
 
-- 這是四平台中選擇器最脆弱者：`.txt` 手動貼入為保底路徑，代填僅在老師明確要求時使用；選擇器失敗立即停止並交還人工。
-- 登入/MFA 親自完成；指派前 agent 需在對話中確認；cookies 只留在本機專用 Chrome profile，不匯出、不複製。
-- **代填功能需在本機、有螢幕的互動式 agent session 執行**；雲端背景任務/遠端無頭 sandbox/CI 無法顯示瀏覽器視窗，不適用（`.txt` 手動貼入不受此限制）。
-
-## Playwright 流程狀態
-
-`references/flows.md` 記錄步驟與成功證據；quiz/match_up 以外模板標記 experimental。
-
-## Browser Core v2：正常 Chrome + CDP
-
-Playwright 預設透過 CDP 連接使用者啟動的教育平台專用正常 Chrome；Google OAuth、
-MFA、CAPTCHA 都在 Skill detach 後由老師本人完成。Flows still use a URL + DOM
-authentication check, condition-based waits, run-state journals, classified
-selector failures, and local redacted diagnostics. Flat-cell editors verify
-input counts and grow rows by condition rather than fixed sleeps. An ambiguous
-external write returns `resumeUrl` and must not be retried automatically.
-
-環境變數：`TW_EDU_CDP_URL` 可指定 endpoint；`TW_EDU_CHROME_PATH` 可指定 Chrome；
-只有非 Google 帳號的明確需求才可設定 `TW_EDU_BROWSER_MODE=playwright`。
-
-Run local checks with:
-
-```bash
-npm test
-npm run check:browser-core
-```
-
-Validation boundaries and the latest readonly canary result are recorded in
-`docs/browser-core-validation.md`.
-
-Computer Use is a manual fallback for login/MFA/CAPTCHA or selector drift; it
-does not replace deterministic success evidence or external-write gates.
+這套 skill 原本用 Playwright 自動化登入＋逐題代填＋設定指派整條鏈。Google OAuth 會拒絕 Playwright 自動化的瀏覽器，之後改用連接使用者另外啟動的「正常 Chrome」（CDP）解決登入問題；但即便如此，**選擇器驅動的 UI 自動化本身仍然不穩定**——Wordwall 又是四平台中選擇器最脆弱的一個。現在改成只產生最大程度符合 Wordwall 貼上慣例的檔案，平台 UI 的最後一哩路（貼入、發布、指派）交給老師，不再嘗試自動操作瀏覽器。
 
 ## License
 

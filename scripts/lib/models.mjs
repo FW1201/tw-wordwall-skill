@@ -69,6 +69,9 @@ export const WordwallPair = z
 export const WordwallGroup = z
   .object({ name: z.string().min(1), items: z.array(z.string().min(1)).default([]) })
   .passthrough();
+export const WordwallSentence = z
+  .object({ text: z.string().min(1), answer: z.string().min(1) })
+  .passthrough();
 export const WordwallContentInput = z
   .object({
     title: z.string().max(300).optional(),
@@ -76,5 +79,6 @@ export const WordwallContentInput = z
     pairs: z.array(WordwallPair).optional(),
     words: z.array(z.string().min(1)).optional(),
     groups: z.array(WordwallGroup).optional(),
+    sentences: z.array(WordwallSentence).optional(),
   })
   .passthrough();

@@ -3,8 +3,9 @@
 // now the entire product surface).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildWordwallContent } from "../scripts/build-content.mjs";
+import { buildOutputQuality, buildWordwallContent as rawBuildWordwallContent } from "../scripts/build-content.mjs";
 import { WordwallContentInput } from "../scripts/lib/models.mjs";
+const buildWordwallContent = (input, template) => rawBuildWordwallContent(input, template, { legacy: true });
 
 const quiz = {
   title: "光合作用小測驗",
@@ -52,8 +53,9 @@ test("true_false template: derives True/False answer from correct option", () =>
 test("true_false template: warns when no option is marked correct", () => {
   const noAnswer = { title: "t", questions: [{ type: "true_false", prompt: "p", options: [{ text: "True", correct: false }] }] };
   const input = WordwallContentInput.parse({ quiz: noAnswer });
-  const { warnings } = buildWordwallContent(input, "true_false");
+  const { warnings, skippedItems } = buildWordwallContent(input, "true_false");
   assert.ok(warnings.some((w) => w.includes("no option marked correct")));
+  assert.equal(skippedItems, 1);
 });
 
 test("alias templates (matching_pairs/find_the_match/flash_cards) reuse match_up shape", () => {
@@ -81,8 +83,16 @@ test("complete_the_sentence: derives from quiz prompts containing a blank marker
 
 test("complete_the_sentence: warns and skips prompts without a blank marker", () => {
   const input = WordwallContentInput.parse({ quiz });
-  const { warnings } = buildWordwallContent(input, "complete_the_sentence");
+  const { warnings, skippedItems } = buildWordwallContent(input, "complete_the_sentence");
   assert.ok(warnings.some((w) => w.includes("已略過")));
+  assert.equal(skippedItems, 2);
+});
+
+test("structured skipped item count downgrades a ready quality report", () => {
+  const quality = buildOutputQuality({ ok: true, status: "ready", blockers: [], warnings: [] }, 1);
+  assert.equal(quality.status, "platform-partial");
+  assert.equal(quality.ok, false);
+  assert.equal(quality.blockers[0].code, "platform-partial");
 });
 
 test("CSV field escaping quotes commas and embedded quotes", () => {

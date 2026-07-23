@@ -17,6 +17,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { WordwallContentInput } from "./lib/models.mjs";
+import { legacyQualityReport, validateAssessmentQuiz } from "./lib/assessment-quality.mjs";
 
 const TEMPLATES = [
   "quiz",
@@ -47,12 +48,15 @@ function csvField(value) {
 const csvRow = (fields) => fields.map(csvField).join(",");
 const firstCorrect = (options) => options.find((o) => o.correct)?.text;
 
-function pairsFromQuiz(quiz, warnings) {
+function pairsFromQuiz(quiz, warnings, diagnostics) {
   const pairs = [];
   quiz.questions.forEach((q, idx) => {
     const definition = firstCorrect(q.options) ?? q.acceptedAnswers[0];
     if (definition) pairs.push({ term: q.prompt, definition });
-    else warnings.push(`Q${idx + 1}: no correct option/accepted answer — skipped for match_up.`);
+    else {
+      warnings.push(`Q${idx + 1}: no correct option/accepted answer — skipped for match_up.`);
+      diagnostics.skippedItems += 1;
+    }
   });
   return pairs;
 }
@@ -67,7 +71,7 @@ function wordsFromQuiz(quiz) {
 // true_false: derive a boolean answer per question the same way
 // tw-wayground-skill's build-xlsx.mjs does (an option whose text reads as
 // "true"), rather than requiring a separate input shape.
-function trueFalseFromQuiz(quiz, warnings) {
+function trueFalseFromQuiz(quiz, warnings, diagnostics) {
   const rows = [];
   quiz.questions.forEach((q, idx) => {
     const correctIsTrue = q.options.some(
@@ -76,6 +80,7 @@ function trueFalseFromQuiz(quiz, warnings) {
     const hasAnyCorrect = q.options.some((o) => o.correct);
     if (!hasAnyCorrect) {
       warnings.push(`Q${idx + 1}: no option marked correct — true_false needs a True/False answer.`);
+      diagnostics.skippedItems += 1;
       return;
     }
     rows.push({ prompt: q.prompt, answer: correctIsTrue ? "True" : "False" });
@@ -85,19 +90,29 @@ function trueFalseFromQuiz(quiz, warnings) {
 // complete_the_sentence / missing_word: a sentence containing a blank plus
 // its answer. Falls back to deriving from quiz questions whose prompt already
 // contains a blank marker.
-function sentencesFromQuiz(quiz, warnings) {
+function sentencesFromQuiz(quiz, warnings, diagnostics) {
   const sentences = [];
   quiz.questions.forEach((q, idx) => {
     const hasBlank = /_{2,}|\[blank\]/i.test(q.prompt);
     const answer = firstCorrect(q.options) ?? q.acceptedAnswers[0];
     if (hasBlank && answer) sentences.push({ text: q.prompt, answer });
-    else warnings.push(`Q${idx + 1}: complete_the_sentence 需要題幹含底線空格（如 ___）且有正解，已略過。`);
+    else {
+      warnings.push(`Q${idx + 1}: complete_the_sentence 需要題幹含底線空格（如 ___）且有正解，已略過。`);
+      diagnostics.skippedItems += 1;
+    }
   });
   return sentences;
 }
 
-export function buildWordwallContent(input, template) {
+export function buildWordwallContent(input, template, { legacy = false } = {}) {
+  const effectiveQuality = input.quiz
+    ? (legacy ? legacyQualityReport(input.quiz) : validateAssessmentQuiz(input.quiz))
+    : { ok: true, status: "not-applicable" };
+  if (!effectiveQuality.ok) throw new Error("assessment-quality-blocked");
   const warnings = [];
+  // Keep loss of source material as data, rather than inferring it back from
+  // translated warning text when the CLI writes the quality report.
+  const diagnostics = { skippedItems: 0 };
   const title = input.title ?? input.quiz?.title ?? "Wordwall activity";
   const csvLines = [];
   const txtLines = [`# ${title}`, `Template: ${template}`, ""];
@@ -136,7 +151,7 @@ export function buildWordwallContent(input, template) {
     }
     case "match_up": {
       const pairs =
-        input.pairs?.length ? input.pairs : input.quiz ? pairsFromQuiz(input.quiz, warnings) : [];
+        input.pairs?.length ? input.pairs : input.quiz ? pairsFromQuiz(input.quiz, warnings, diagnostics) : [];
       if (pairs.length === 0) warnings.push("match_up template requires `pairs` or a `quiz`; produced empty content.");
       csvLines.push(csvRow(["term", "definition"]));
       pairs.forEach((p, idx) => {
@@ -181,7 +196,7 @@ export function buildWordwallContent(input, template) {
       break;
     }
     case "true_false": {
-      const rows = input.quiz ? trueFalseFromQuiz(input.quiz, warnings) : [];
+      const rows = input.quiz ? trueFalseFromQuiz(input.quiz, warnings, diagnostics) : [];
       if (rows.length === 0) warnings.push("true_false template requires a `quiz` with a correct option per question; produced empty content.");
       csvLines.push(csvRow(["question", "answer"]));
       rows.forEach((r, idx) => {
@@ -194,7 +209,7 @@ export function buildWordwallContent(input, template) {
       const sentences = input.sentences?.length
         ? input.sentences
         : input.quiz
-          ? sentencesFromQuiz(input.quiz, warnings)
+          ? sentencesFromQuiz(input.quiz, warnings, diagnostics)
           : [];
       if (sentences.length === 0) warnings.push("complete_the_sentence template requires `sentences` or a `quiz` with blank-marked prompts; produced empty content.");
       csvLines.push(csvRow(["sentence", "answer"]));
@@ -221,7 +236,18 @@ export function buildWordwallContent(input, template) {
     txt: txtLines.join("\n").trimEnd() + "\n",
     warnings,
     experimental: !VERIFIED_TEMPLATES.has(template),
+    skippedItems: diagnostics.skippedItems,
   };
+}
+
+export function buildOutputQuality(quality, skippedItems) {
+  const outputQuality = structuredClone(quality);
+  if (outputQuality.status === "ready" && skippedItems > 0) {
+    outputQuality.ok = false;
+    outputQuality.status = "platform-partial";
+    outputQuality.blockers = [...(outputQuality.blockers ?? []), { code: "platform-partial", message: "所選 Wordwall 模板略過部分素材；請修正後再交付。" }];
+  }
+  return outputQuality;
 }
 
 function arg(name) {
@@ -241,6 +267,7 @@ if (isMain) {
   // mojibake — off by default (plain .txt paste doesn't need it; only opt in
   // when the teacher will actually open the .csv in Excel).
   const useBom = process.argv.includes("--bom");
+  const legacy = process.argv.includes("--legacy");
 
   if (!inputFile || !TEMPLATES.includes(template)) {
     out({ ok: false, error: "usage", hint: `node scripts/build-content.mjs <input.json> --template ${TEMPLATES.join("|")} --out-dir <dir> [--bom]` });
@@ -254,19 +281,30 @@ if (isMain) {
         ? { title: raw.title, quiz: raw }
         : raw;
     const input = WordwallContentInput.parse(wrapped);
-    const { csv, txt, warnings, experimental } = buildWordwallContent(input, template);
+    const quality = input.quiz
+      ? (legacy ? legacyQualityReport(input.quiz) : validateAssessmentQuiz(input.quiz))
+      : { ok: true, status: "not-applicable", blockers: [], warnings: [{ code: "activity-brief-required", message: "非 quiz 模板請在教師工作流確認來源、受測者與活動目標。" }], perQuestion: [] };
+    if (!quality.ok) {
+      out({ ok: false, error: "assessment-quality-blocked", quality, hint: "請補齊 quiz.assessment brief，或明確使用 --legacy。" });
+      process.exit(1);
+    }
+    const { csv, txt, warnings, experimental, skippedItems } = buildWordwallContent(input, template, { legacy });
+    const outputQuality = buildOutputQuality(quality, skippedItems);
     const slug = (input.title ?? input.quiz?.title ?? "wordwall").replace(/[^\w一-鿿]+/g, "_").slice(0, 40);
     await fs.mkdir(outDir, { recursive: true });
     const csvPath = path.join(outDir, `${slug}.csv`);
     const txtPath = path.join(outDir, `${slug}.txt`);
+    const qualityPath = path.join(outDir, `${slug}.quality.json`);
     await fs.writeFile(csvPath, useBom ? "﻿" + csv : csv, "utf8");
     await fs.writeFile(txtPath, txt, "utf8");
+    await fs.writeFile(qualityPath, JSON.stringify(outputQuality, null, 2), "utf8");
     out({
       ok: true,
       template,
       experimental: experimental || undefined,
       csvPath: path.resolve(csvPath),
       txtPath: path.resolve(txtPath),
+      qualityReportPath: path.resolve(qualityPath),
       warnings,
     });
   } catch (err) {

@@ -2,7 +2,7 @@
 
 # tw-wordwall-skill 使用手冊
 
-非官方的 Wordwall 貼上內容產生器。它輸出模板對應的 `.csv`、`.txt` 與 `.quality.json`，由教師自行貼入、預覽、發布或指派；不登入、不寫入 Wordwall，也不保證未實測模板的欄位會與平台相符。
+Wordwall 教學活動 Skill。它依模板產生 `.csv`、`.txt` 與 `.quality.json`，並提供正常 Chrome 登入、活動貼入、預覽與發布前停點；分享、發布與指派仍由教師決定。
 
 ## 事前條件
 

@@ -1,6 +1,6 @@
 ---
 name: tw-wordwall-skill
-description: Use when a teacher needs source-aware Wordwall paste-ready activity content, especially quiz activities that must be aligned to a learner audience and assessment blueprint.
+description: Use when a teacher needs source-aware Wordwall paste-ready activity content, especially quiz activities that must be aligned to a learner audience and assessment blueprint, or a recorded, human-gated draft-preview handoff with manual Google OAuth bootstrap.
 ---
 
 # Wordwall 活動內容
@@ -48,6 +48,14 @@ description: Use when a teacher needs source-aware Wordwall paste-ready activity
 - 已驗證：`quiz`、`match_up`。`anagram`、`group_sort`、`open_box_or_wheel` 和 `true_false`、`matching_pairs`、`find_the_match`、`flash_cards`、`speaking_cards`、`complete_the_sentence` 均輸出 `experimental`；不得稱其為官方格式已驗證。
 - `match_up` 從 quiz 推導時，題幹會成為 term、第一正解成為 definition；要做精準配對請提供 `pairs`。
 - `--bom` 僅供以 Excel 開啟 CSV 時避免中文亂碼；`.txt` 是保守的手動貼入路徑。`get-oembed.mjs <activity-url>` 只讀已發布活動資料。
+
+## 錄製後的草稿動作
+
+先依 [google-oauth-handoff.md](references/google-oauth-handoff.md) 在教師平常使用的正常 Chrome 個人檔案完成登入；可走 Chrome 原生 Google 帳戶提示或 Wordwall `/account/login` 一般登入頁兩條分支。Skill 不代填 Email、密碼、MFA，也不接管嵌入式 WebView 或新開的自動化瀏覽器。若出現 `This browser or app may not be secure`、`signin/rejected` 或仍在登入頁，停止並請教師回到正常 Chrome 完成登入。
+
+只有在 Wordwall 回到 `/myactivities` 或建立活動頁、顯示帳戶入口／`Log Out` 且不再顯示登入／註冊後，才可接管同一個已登入 Chrome 工作階段。教師以 Record-a-Skill 提供可檢視錄製後，才可依 [recorded-action-handoff.md](references/recorded-action-handoff.md) 將錄到的模板貼入與未公開預覽接回工作流；沒有錄製時不可猜測網站操作。貼入前確認 quality `ready`（或直接資料的 `not-applicable` 及 brief 警告），並核對模板、欄位、題數、答案與編碼。
+
+Publish、Share、Set assignment、學生名單與擴大能見度都要在發布前停止並回報證據；不能把看見發布按鈕當成已完成外部寫入。
 
 ## 例外與限制
 

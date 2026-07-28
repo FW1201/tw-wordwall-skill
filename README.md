@@ -35,6 +35,14 @@ node scripts/build-content.mjs input.json --template quiz --out-dir out/
 
 教師操作：Wordwall → Create Activity → 選擇相同模板 → 以 `.txt` 貼入（或在該模板可用時匯入 `.csv`）→ 對照 warnings、逐欄核對 → 再決定分享、發布或指派。`node scripts/get-oembed.mjs <activity-url>` 只讀取已發布活動的 oEmbed。
 
+## 正常 Chrome 登入與錄製後銜接
+
+登入必須由教師在平常使用的正常 Chrome 個人檔案中完成，可走 Chrome 原生 Google 帳戶提示或 `/account/login` 一般登入頁兩條分支；不要讓自動化瀏覽器、嵌入式 WebView 或 Skill 代填 Email、密碼、MFA。若出現 `This browser or app may not be secure`、`signin/rejected` 或仍停在登入頁，回到正常 Chrome 完成登入後再繼續。Wordwall 回到 `/myactivities` 或建立活動頁、顯示帳戶名稱／`Log Out` 且不再顯示登入／註冊後，才算登入成功。
+
+收到可檢視的 Record & Replay 錄製後，才可用同一個已登入 Chrome 工作階段銜接模板貼入與未公開預覽；每次重新讀取頁面，使用模板名稱、欄位、檔案名稱與按鈕等語意資訊，不固定座標、私人 activity id 或錄製中的檔名。貼入前確認 quality `ready`（或直接資料的 `not-applicable` 及 brief 警告），預覽再核對模板、欄位、題數、答案與編碼。
+
+這個流程最多做到未公開草稿並回報證據；不會自動 Publish、Share、Set assignment 或處理學生名單。完整停止條件見 [`references/google-oauth-handoff.md`](references/google-oauth-handoff.md) 與 [`references/recorded-action-handoff.md`](references/recorded-action-handoff.md)。
+
 ## 舊資料、隱私、維護
 
 對含 quiz 的舊資料，只有明確資料救援才使用 `--legacy`。它會產生 `legacy-unverified` report，不能宣稱已驗題。不要把學生個資、帳密或 token 放入輸入和產物。

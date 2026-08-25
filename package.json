@@ -1,10 +1,13 @@
 {
   "name": "tw-wordwall-skill",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Agent skill: build Wordwall paste-ready activity content across 10 templates, and read published-activity oEmbed. No browser automation.",
   "type": "module",
   "license": "MIT",
   "private": true,
+  "bin": {
+    "tw-edtech-wordwall": "scripts/tw-edtech-wordwall.mjs"
+  },
   "scripts": {
     "test": "node --test tests/*.test.mjs"
   },

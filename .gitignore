@@ -2,3 +2,5 @@ node_modules/
 *.csv
 *.txt
 !tests/**
+*.roster.json
+.tw-edtech-runs/

@@ -62,3 +62,13 @@ npm test
 ```
 
 測試不會登入、建立或發布活動。壓力情境見 [skill-evaluations.md](references/skill-evaluations.md)。
+
+## CLI 控制與下一輪錄製
+
+```bash
+tw-edtech-wordwall doctor
+tw-edtech-wordwall validate --input input.json
+tw-edtech-wordwall plan --action activity.create --resource CANARY-activity
+```
+
+請分段錄製模板建立／貼入、編輯、切換模板、列印、公開、分享、嵌入、指派、結果與刪除。每段使用 `CANARY-<timestamp>`，最後核對模板、題數、能見度與活動 ID；不得包含帳密、Cookie、學生姓名、email、結果或分享連結。未錄製的 UI 動作一律由 CLI 阻擋。

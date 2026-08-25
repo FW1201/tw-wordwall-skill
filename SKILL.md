@@ -59,7 +59,7 @@ Publish、Share、Set assignment、學生名單與擴大能見度都要在發布
 
 ## 例外與限制
 
-`--legacy` 對含 quiz 的輸入輸出 `legacy-unverified`，不可當作品質已驗證。沒有內容建立 API、瀏覽器自動化、發布或指派功能。
+`--legacy` 對含 quiz 的輸入輸出 `legacy-unverified`，不可當作品質已驗證。未有已審核 action map 前，沒有內容建立 API、瀏覽器控制、發布或指派功能。
 
 ## 常見錯誤
 
@@ -68,3 +68,14 @@ Publish、Share、Set assignment、學生名單與擴大能見度都要在發布
 | `assessment-quality-blocked` | 補足 quiz.assessment 與每題追溯欄位；不可用 legacy 規避。 |
 | `experimental: true` | 在對應的 Wordwall 編輯器逐欄核對貼入結果，再由教師決定是否使用。 |
 | no-content／空白輸出 | 依模板提供 `quiz`、`pairs`、`words`、`groups` 或 `sentences`，並讀 warnings。 |
+
+## CLI 教學帳戶控制（錄製後啟用）
+
+`tw-edtech-wordwall` 串接產檔、已驗證模板目錄、計畫與外部動作確認。先跑 `doctor`、`validate --input input.json`、`catalog scan`、`plan`；沒有可檢視的 Canary action map 時，`run` 必須停止，不能用固定座標或活動 ID 取代。
+
+```bash
+tw-edtech-wordwall validate --input input.json
+tw-edtech-wordwall plan --action activity.create --resource CANARY-activity
+```
+
+建立與編輯需 `--confirm-write`；公開、Share、嵌入、Set assignment、結果匯出及刪除另需 `--confirm-plan` 加 `--confirm-impact`。含學生資料的流程還需 `--confirm-student-data`，CLI 只顯示遮罩摘要。

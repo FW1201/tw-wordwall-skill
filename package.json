@@ -1,6 +1,6 @@
 {
   "name": "tw-wordwall-skill",
-  "version": "0.5.0-rc.2",
+  "version": "0.5.0-rc.3",
   "description": "Agent skill: build Wordwall paste-ready activity content across 10 templates, and read published-activity oEmbed. No browser automation.",
   "type": "module",
   "license": "MIT",

@@ -298,8 +298,11 @@ if (isMain) {
     await fs.writeFile(csvPath, useBom ? "﻿" + csv : csv, "utf8");
     await fs.writeFile(txtPath, txt, "utf8");
     await fs.writeFile(qualityPath, JSON.stringify(outputQuality, null, 2), "utf8");
+    const complete = skippedItems === 0;
     out({
-      ok: true,
+      ok: complete,
+      status: complete ? "generated-review-required" : "partial",
+      skippedItems,
       template,
       experimental: experimental || undefined,
       csvPath: path.resolve(csvPath),
@@ -307,6 +310,7 @@ if (isMain) {
       qualityReportPath: path.resolve(qualityPath),
       warnings,
     });
+    if (!complete) process.exitCode = 2;
   } catch (err) {
     const hint = err?.issues
       ? `input.json 格式錯誤（欄位：${err.issues.map((i) => i.path.join(".")).join("、")}）。對照 scripts/lib/models.mjs 的 WordwallContentInput（title?/quiz?/pairs?/words?/groups?/sentences?）。`

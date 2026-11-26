@@ -116,3 +116,6 @@ test("true_false accepts Chinese false labels",()=>{const input=WordwallContentI
 
 
 test("match-up never silently discards additional correct answers",()=>{const input=WordwallContentInput.parse({quiz:{title:"t",questions:[{type:"multiple_select",prompt:"p",options:[{text:"a",correct:true},{text:"b",correct:true}]}]}});const r=buildWordwallContent(input,"match_up");assert.equal(r.skippedItems,1);assert.match(r.warnings.join(),/unambiguous/);assert.doesNotMatch(r.csv,/p,a/)});
+
+
+test("CLI reports partial and exits nonzero if a question was skipped",async()=>{const {spawnSync}=await import("node:child_process");const {mkdtemp,writeFile}=await import("node:fs/promises");const os=await import("node:os");const path=await import("node:path");const tmp=await mkdtemp(path.join(os.tmpdir(),"ww-partial-"));const input=path.join(tmp,"q.json");await writeFile(input,JSON.stringify({title:"t",questions:[{type:"true_false",prompt:"p",options:[{text:"未知",correct:true}]}]}));const cli=new URL("../scripts/build-content.mjs",import.meta.url);const r=spawnSync(process.execPath,[cli.pathname,input,"--template","true_false","--out-dir",tmp,"--legacy"],{encoding:"utf8"});assert.equal(r.status,2);const report=JSON.parse(r.stdout);assert.equal(report.ok,false);assert.equal(report.status,"partial");assert.equal(report.skippedItems,1)});

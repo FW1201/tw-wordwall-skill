@@ -3,6 +3,11 @@ name: tw-wordwall-skill
 description: Design and create source-aware Wordwall teaching activities, choose compatible templates, prepare paste-ready content, and use available browser tools to build or verify the activity.
 ---
 
+## 教材對接與人工驗收（優先適用）
+
+將來源、年級、學習目標、課堂時間和平台模式對應至可匯入欄位，保留題幹、選項、正解、解析及來源；匯入格式不支援的內容應留在交接資料，列出截斷、略過、轉型與需手動補入項目。先檢查產出及來源對應，使用可用 connector、MCP、API 或已登入介面建立草稿，並如實回報工具回應、資源連結、狀態與不確定處。提供教師人工審查清單，包含來源與事實、年級與目標、題目答案、媒體、格式損失及分享權限；平台呈現與最終驗收由教師確認。本 Skill 不自動試玩或模擬學生操作，不以遊戲機制或試玩作為交付必要條件；未經人工確認不得聲稱已完成最終驗收。下文的「核對」指產出準備與交接，平台成品的確認由教師執行；必要的工具回應與寫入狀態檢查仍保留。
+
+
 使用平台特有模式時，先查閱 [模式與驗證指引](references/platform-modes.md)。以 [教學 brief 範例](assets/lesson-brief-v1.example.json) 定義年級、來源、目標、活動、時間和玩家回饋；用既有 CLI 的 `lesson --input <brief.json>` 檢查時間及來源關聯，結果不取代教師審查。
 
 ## 跨 Agent 環境與工具發現

@@ -31,7 +31,7 @@ node scripts/build-content.mjs input.json --template quiz --out-dir out/
 
 ## 模板狀態與教師貼入
 
-只有 `quiz`、`match_up` 已在對應 Wordwall 編輯器實測。其他模板皆為 `experimental`，即使沿用相同資料形狀也**不得稱為官方格式已驗證**；看到 `experimental: true` 時，教師要在該模板編輯器逐欄檢查。`match_up` 從 quiz 推導會把完整題幹作為 term、第一正解作為 definition，若需精準配對請提供 `pairs[]`。
+只有 `quiz`、`match_up` 已在對應 Wordwall 編輯器實測。其他模板皆為 `experimental`，即使沿用相同資料形狀也**不得稱為官方格式已驗證**；看到 `experimental: true` 時，教師要在該模板編輯器逐欄檢查。`match_up` 從 quiz 推導會把完整題幹作為 term、唯一正解作為 definition；多個正解會跳過並警告，若需精準配對請提供 `pairs[]`。
 
 教師操作：Wordwall → Create Activity → 選擇相同模板 → 以 `.txt` 貼入（或在該模板可用時匯入 `.csv`）→ 對照 warnings、逐欄核對 → 再決定分享、發布或指派。`node scripts/get-oembed.mjs <activity-url>` 只讀取已發布活動的 oEmbed。
 

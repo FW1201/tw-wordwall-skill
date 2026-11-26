@@ -87,3 +87,7 @@ tw-edtech-wordwall plan --action activity.create --resource CANARY-activity
 ```
 
 建立與編輯需 `--confirm-write`；公開、Share、嵌入、Set assignment、結果匯出及刪除另需 `--confirm-plan` 加 `--confirm-impact`。含學生資料的流程還需 `--confirm-student-data`，CLI 只顯示遮罩摘要。
+
+## 匯入內容保真
+
+處理教材轉換前，讀取 [平台模式與核對](references/platform-modes.md)；完整回報跳過與限制，並逐題核對題幹、選項和正解。不得將部分轉換或未實際匯入的檔案描述為已建立的平台活動。

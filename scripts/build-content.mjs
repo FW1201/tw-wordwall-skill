@@ -51,10 +51,11 @@ const firstCorrect = (options) => options.find((o) => o.correct)?.text;
 function pairsFromQuiz(quiz, warnings, diagnostics) {
   const pairs = [];
   quiz.questions.forEach((q, idx) => {
-    const definition = firstCorrect(q.options) ?? q.acceptedAnswers[0];
-    if (definition) pairs.push({ term: q.prompt, definition });
+    const marked = q.options.filter(o=>o.correct).map(o=>o.text);
+    const candidates = [...new Set(marked.length ? marked : q.acceptedAnswers)];
+    if (candidates.length === 1) pairs.push({ term: q.prompt, definition: candidates[0] });
     else {
-      warnings.push(`Q${idx + 1}: no correct option/accepted answer — skipped for match_up.`);
+      warnings.push(`Q${idx + 1}: match_up requires exactly one unambiguous correct option/accepted answer — skipped.`);
       diagnostics.skippedItems += 1;
     }
   });
@@ -74,16 +75,15 @@ function wordsFromQuiz(quiz) {
 function trueFalseFromQuiz(quiz, warnings, diagnostics) {
   const rows = [];
   quiz.questions.forEach((q, idx) => {
-    const correctIsTrue = q.options.some(
-      (o) => o.correct && /^(true|t|是|對|正確)$/i.test(o.text.trim()),
-    );
-    const hasAnyCorrect = q.options.some((o) => o.correct);
-    if (!hasAnyCorrect) {
-      warnings.push(`Q${idx + 1}: no option marked correct — true_false needs a True/False answer.`);
+    const marked = q.options.filter((o) => o.correct);
+    const value = marked.length === 1 ? marked[0].text.trim() : "";
+    const truth = /^(true|t|是|對|正確)$/i.test(value) ? "True" : /^(false|f|否|錯|錯誤)$/i.test(value) ? "False" : null;
+    if (!truth) {
+      warnings.push(`Q${idx + 1}: true_false answer is missing, ambiguous, or not recognized — skipped; review original labels.`);
       diagnostics.skippedItems += 1;
       return;
     }
-    rows.push({ prompt: q.prompt, answer: correctIsTrue ? "True" : "False" });
+    rows.push({ prompt: q.prompt, answer: truth });
   });
   return rows;
 }

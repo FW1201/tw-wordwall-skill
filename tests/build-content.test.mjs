@@ -54,7 +54,7 @@ test("true_false template: warns when no option is marked correct", () => {
   const noAnswer = { title: "t", questions: [{ type: "true_false", prompt: "p", options: [{ text: "True", correct: false }] }] };
   const input = WordwallContentInput.parse({ quiz: noAnswer });
   const { warnings, skippedItems } = buildWordwallContent(input, "true_false");
-  assert.ok(warnings.some((w) => w.includes("no option marked correct")));
+  assert.ok(warnings.some((w) => w.includes("missing, ambiguous, or not recognized")));
   assert.equal(skippedItems, 1);
 });
 
@@ -109,3 +109,10 @@ test("empty input parses (all fields optional) but produces an empty-content war
   const { warnings } = buildWordwallContent(empty, "quiz");
   assert.ok(warnings.some((w) => w.includes("requires `quiz`")));
 });
+
+
+test("true_false does not guess an unknown answer as False",()=>{const input=WordwallContentInput.parse({quiz:{title:"t",questions:[{type:"true_false",prompt:"p",options:[{text:"可能",correct:true},{text:"不一定",correct:false}]}]}});const r=buildWordwallContent(input,"true_false");assert.equal(r.skippedItems,1);assert.match(r.warnings.join(),/not recognized/);assert.doesNotMatch(r.csv,/False/)});
+test("true_false accepts Chinese false labels",()=>{const input=WordwallContentInput.parse({quiz:{title:"t",questions:[{type:"true_false",prompt:"p",options:[{text:"正確",correct:false},{text:"錯誤",correct:true}]}]}});const r=buildWordwallContent(input,"true_false");assert.equal(r.skippedItems,0);assert.match(r.csv,/False/)});
+
+
+test("match-up never silently discards additional correct answers",()=>{const input=WordwallContentInput.parse({quiz:{title:"t",questions:[{type:"multiple_select",prompt:"p",options:[{text:"a",correct:true},{text:"b",correct:true}]}]}});const r=buildWordwallContent(input,"match_up");assert.equal(r.skippedItems,1);assert.match(r.warnings.join(),/unambiguous/);assert.doesNotMatch(r.csv,/p,a/)});

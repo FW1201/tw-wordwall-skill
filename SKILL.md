@@ -1,11 +1,19 @@
 ---
 name: tw-wordwall-skill
-description: Use when a teacher needs source-aware Wordwall paste-ready activity content, especially quiz activities that must be aligned to a learner audience and assessment blueprint, or a recorded, human-gated draft-preview handoff with manual Google OAuth bootstrap.
+description: Design and create source-aware Wordwall teaching activities, choose compatible templates, prepare paste-ready content, and use available browser tools to build or verify the activity.
 ---
+
+使用平台特有模式時，先查閱 [模式與驗證指引](references/platform-modes.md)。以 [教學 brief 範例](assets/lesson-brief-v1.example.json) 定義年級、來源、目標、活動、時間和玩家回饋；用既有 CLI 的 `lesson --input <brief.json>` 檢查時間及來源關聯，結果不取代教師審查。
+
+## 跨 Agent 環境與工具發現
+
+首次安裝前及需要外部平台操作前，執行 `node scripts/portable-core/agent-doctor.mjs --agent codex`；可將 codex 換為 claude、antigravity、opencode 或 other。診斷不會讀出或測試金鑰；unknown 不是可用。依診斷提示與當前 Agent 工具清單檢查 connector/MCP、權限、瀏覽器與登入，不能由本機 CLI 是否存在推論工具可用。詳見 [跨 Agent 與模式指引](references/portable-integration.md)。
+
+連接器與 MCP 路徑僅在當前工具庫確認操作、權限與使用者需求後使用；使用具體工具前確認其參數及輸出。原有下方 CLI 與人工流程、品質檢查及外部寫入限制仍適用於原工具；不能宣稱未測試的工具路徑已完成。完成後讀回並區分草稿、發布及分享狀態。
 
 # Wordwall 活動內容
 
-產生 Wordwall 可貼入的 `.csv` 與 `.txt`，不直接建立、發布或指派活動。**以 `quiz` 驅動的任何模板都先走 assessment 品質關卡；直接資料模板雖不會被 CLI 阻擋，仍要先確認來源、受測者與活動目標。**
+既有 CLI 產生 Wordwall 可貼入的 `.csv` 與 `.txt`；已登入且具可用 Computer Use 的 Agent 可依使用者授權建立及核對活動。**以 `quiz` 驅動的任何模板都先走 assessment 品質關卡；直接資料模板雖不會被 CLI 阻擋，仍要先確認來源、受測者與活動目標。**
 
 ## 必要工作流
 
@@ -14,7 +22,7 @@ description: Use when a teacher needs source-aware Wordwall paste-ready activity
 3. 執行 `node scripts/build-content.mjs input.json --template quiz --out-dir out/`。
 4. `quiz` 先讀 `<slug>.quality.json`，僅 `ready` 可交付；非 quiz 會是 `not-applicable` 並提醒教師完成活動 brief。
 5. 完整轉述 stdout `warnings`。`experimental: true` 代表該**實際 Wordwall 模板**尚未實測，必須在編輯器逐欄核對。
-6. 教師自行 Create Activity、選模板、貼入並檢查後才決定發布或指派。
+6. 視可用工具與授權，由 Agent 或教師在現有登入頁建立活動、選模板、填入並核對；讀回題目、答案、連結及分享狀態。
 
 ## assessment v1 契約（含 quiz 時必填）
 

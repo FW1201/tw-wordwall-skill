@@ -1,86 +1,97 @@
 <p align="center"><img src="assets/logo.png" width="88" alt="Wordwall logo"></p>
 
-# tw-wordwall-skill 使用手冊
+# tw-wordwall-skill
 
-Wordwall 教學活動 Skill。它依模板產生 `.csv`、`.txt` 與 `.quality.json`，並提供正常 Chrome 登入、活動貼入、預覽與發布前停點；分享、發布與指派仍由教師決定。
+把教師教材與學習目標整理為 Wordwall 活動，依模板產生可貼入內容，並說明轉換損失與教師確認項目。 目前版本：**0.5.0-rc.6（候選版）**。本專案為獨立教師工具，並非 Wordwall 官方產品。
 
-## 事前條件
+## 能力與限制
 
-- Node.js 18 以上，先執行 `npm install`。
-- `quiz` 驅動的活動：備妥可定位來源、受測者、目標、用途與藍圖，從 [assessment-brief.example.json](references/assessment-brief.example.json) 擴充。
-- 直接資料模板（`pairs`、`words`、`groups`、`sentences`）：CLI 不會阻擋，但教師仍應先確認來源、受測者及活動目標，避免把不適齡或脫離教材的資料直接做成遊戲。
+| 項目 | 本 Skill 協助 | 範圍與限制 |
+|---|---|---|
+| 模板與內容 | 依 `quiz`、`match_up` 等模板產生 CSV、TXT；其他模板保留 experimental 標示 | 教師確認目標模板欄位及實際呈現；不保證 CSV 自動匯入 |
+| 資料保真 | 不猜測無法判斷的真偽答案；多正解配對題不靜默丟棄 | 被跳過時回報 partial 和 warnings，需人工修訂 |
+| 活動建立 | 依宿主可用能力、授權及現有登入介面操作或交由教師貼入 | 範例驗證是逐欄輸入；CLI 自動建立未驗證 |
+| 延伸模式 | 提供模板切換、紙本、指派與結果的操作指引 | 實際選項依帳號、模板及平台介面 |
 
-## 標準使用
+## 從教材到平台
+
+1. 提供教材檔案或連結、適用年級、學習目標、課堂時間、設備與希望使用的模式。未能讀取的來源會標示，不根據檔名猜測。
+2. Agent 整理來源、目標、活動、操作、回饋與學習證據；使用 [教學 brief 範例](assets/lesson-brief-v1.example.json) 與 `lesson` 檢查來源 ID 和時間等結構。
+3. 根據實際可用的 connector／MCP、官方 API、CLI、已登入瀏覽器或人工匯入路徑準備內容；建立或上傳僅在使用者授權且工具可用時執行。
+4. 回報來源對應、產物、連結與已知狀態，列出跳過、格式轉換、媒體損失及需手動補入項目。逾時或結果不明時先核對現有資源，避免重複建立。
+5. **平台成果與最終驗收交由教師人工確認。** Agent 不自動試玩或模擬學生操作，也不將試玩列為交付條件；未經確認的內容不宣稱已驗收。分享、發布與指派依授權及當時工具能力處理。
+
+## Wordwall 內容轉換
 
 ```bash
-npm install
 node scripts/build-content.mjs input.json --template quiz --out-dir out/
 ```
 
-可用模板：`quiz`、`match_up`、`anagram`、`group_sort`、`open_box_or_wheel`、`true_false`、`matching_pairs`、`find_the_match`、`flash_cards`、`speaking_cards`、`complete_the_sentence`。加 `--bom` 只是在 Excel 開 CSV 時保留中文編碼；`.txt` 是較保守的手動貼入檔。
+輸入與命題藍圖參見 [assessment 範例](references/assessment-brief.example.json)。含 quiz 的輸出須檢查 quality report，直接資料模板另須確認來源、對象與目標。輸出中的 warnings、`experimental` 和 `partial` 應完整交給教師。更多模板與既有 CLI 指令見 [CLI 使用手冊](references/cli-guide.md)。
 
-輸出中的 `qualityReportPath` 指向 `<slug>.quality.json`。含 `quiz` 時，只有 `status: "ready"` 可交付，請讀 `blockers/warnings/perQuestion/blueprint`；沒有 quiz 的直接資料輸入會是 `not-applicable` 並提醒確認活動 brief。stdout `warnings` 必須完整提供給教師。
+## 給 Agent 的指令範例
 
-## assessment v1 契約
+> 請依這份七年級教材設計 15 分鐘 Wordwall 配對活動，保留來源與答案，產生可貼入資料並列出教師需檢查的項目。
 
-`input.json` 有 `quiz` 時，該 Quiz 必須有 `title/questions[]/assessment.version:1`。`assessment.sources[]` 每筆有 `id/title/locator`；`audience` 有 `gradeLevel/proficiency/language/prerequisites[]`；`objectives[]` 有 `id/text`；還要有 `purpose` 與 `blueprint[]`（`objectiveId/cognitiveLevel/difficulty/count`）。每題有 `sourceRefIds[]`、`objectiveIds[]`、`cognitiveLevel`、`difficulty`。
+教學 brief 範例可用下列命令檢查；結構通過不代表學科內容已經教師審核：
 
-允許認知層次：`remember`、`understand`、`apply`、`analyze`、`evaluate`、`create`；難度：`basic`、`developing`、`proficient`、`advanced`。每題的來源與目標要已登錄；藍圖的題數總和及每一格實際數量都要相同。選擇題至少一個正解，單選題剛好一個；應提供 `explanation` 供教師複核。
+```bash
+node scripts/tw-edtech-wordwall.mjs lesson --input assets/lesson-brief-v1.example.json
+```
 
-缺資料或不一致會以 `assessment-quality-blocked` 停止。不要因趕課直接換 `--legacy`。
+## 安裝與環境檢查
 
-## 模板狀態與教師貼入
+需要 Node.js 18 以上；平台操作另依所選路徑需要網路、平台權限與使用者登入。沒有 connector 不會阻止本地教材設計或現有支援的匯入檔產生。
 
-只有 `quiz`、`match_up` 已在對應 Wordwall 編輯器實測。其他模板皆為 `experimental`，即使沿用相同資料形狀也**不得稱為官方格式已驗證**；看到 `experimental: true` 時，教師要在該模板編輯器逐欄檢查。`match_up` 從 quiz 推導會把完整題幹作為 term、唯一正解作為 definition；多個正解會跳過並警告，若需精準配對請提供 `pairs[]`。
+```bash
+git clone https://github.com/FW1201/tw-wordwall-skill.git
+cd tw-wordwall-skill
+npm ci --ignore-scripts
+node scripts/portable-core/agent-doctor.mjs --agent codex
+```
 
-教師操作：Wordwall → Create Activity → 選擇相同模板 → 以 `.txt` 貼入（或在該模板可用時匯入 `.csv`）→ 對照 warnings、逐欄核對 → 再決定分享、發布或指派。`node scripts/get-oembed.mjs <activity-url>` 只讀取已發布活動的 oEmbed。
+`codex` 可改成 `claude`、`antigravity`、`opencode` 或 `other`。診斷檢查 Node、npm、作業系統、安裝位置與同名 Skill；它不會顯示憑證，也不會憑本機程序推定 connector、平台登入或權限可用。結果為 `unknown` 時，請在當前 Agent 中確認。
 
-## 正常 Chrome 登入與錄製後銜接
+### 安裝到 Agent 專案
 
-登入必須由教師在平常使用的正常 Chrome 個人檔案中完成，可走 Chrome 原生 Google 帳戶提示或 `/account/login` 一般登入頁兩條分支；不要讓自動化瀏覽器、嵌入式 WebView 或 Skill 代填 Email、密碼、MFA。若出現 `This browser or app may not be secure`、`signin/rejected` 或仍停在登入頁，回到正常 Chrome 完成登入後再繼續。Wordwall 回到 `/myactivities` 或建立活動頁、顯示帳戶名稱／`Log Out` 且不再顯示登入／註冊後，才算登入成功。
+先將下列 `<既有專案目錄>` 換成實際路徑；安裝器先執行診斷，預設只預覽：
 
-收到可檢視的 Record & Replay 錄製後，才可用同一個已登入 Chrome 工作階段銜接模板貼入與未公開預覽；每次重新讀取頁面，使用模板名稱、欄位、檔案名稱與按鈕等語意資訊，不固定座標、私人 activity id 或錄製中的檔名。貼入前確認 quality `ready`（或直接資料的 `not-applicable` 及 brief 警告），預覽再核對模板、欄位、題數、答案與編碼。
+```bash
+node scripts/portable-core/install.mjs --agent codex --project <既有專案目錄>
+node scripts/portable-core/install.mjs --agent codex --project <既有專案目錄> --apply --with-deps
+```
 
-這個流程最多做到未公開草稿並回報證據；不會自動 Publish、Share、Set assignment 或處理學生名單。完整停止條件見 [`references/google-oauth-handoff.md`](references/google-oauth-handoff.md) 與 [`references/recorded-action-handoff.md`](references/recorded-action-handoff.md)。
+其他 Agent 將 `codex` 換成對應名稱。同名目標預設拒絕覆蓋；升級時先預覽 `--upgrade`，確認目標後使用 `--upgrade --apply --with-deps`。舊版會備份至專案 `.edtech-skill-backups/`，準備依賴失敗時保留原版。安裝器僅處理專案 Skill，不會設定全域 MCP、登入或保證自動觸發。重新載入 Agent，確認實際讀取的 Skill 路徑。詳細修復與回復見 [跨 Agent 整合](references/portable-integration.md)。
 
-## 舊資料、隱私、維護
+## Connector、MCP 與替代路徑
 
-對含 quiz 的舊資料，只有明確資料救援才使用 `--legacy`。它會產生 `legacy-unverified` report，不能宣稱已驗題。不要把學生個資、帳密或 token 放入輸入和產物。
+本 Skill 優先評估當前宿主工具是否能完成指定任務，再依可用性選擇 connector、MCP、官方 API、CLI、Computer Use 或人工匯入。工具路由需要本次實際的能力與權限證據；CLI 本身不能直接呼叫 Codex 的內建 connector。呼叫失敗、逾時或回應不明時會與成功分開處理，不自動重送可能已寫入的動作。
 
-維護者若要將 experimental 模板升級為已驗證，需以當日教師帳號在該模板建立未公開活動，逐欄貼入 CSV/TXT、檢查題目／答案／編碼與預覽，並把可重跑的證據與測試更新；程式測試不能取代此步驟。
+四平台另有獨立的 MCP Skills 套件，提供 Skill 入口及參考資源；它不附帶平台 connector，不代表宿主會自動啟用 Skill。MCP 套件並非本儲存庫的一部分；需取得其獨立發佈檔再配置。
 
-## 疑難排解與驗證
+## 相容性與驗證狀態
 
-| 現象 | 處理 |
-|---|---|
-| `assessment-quality-blocked` | 補 quiz.assessment 與每題追溯資料，勿將 legacy 當作修正。 |
-| `experimental: true` | 在該模板的編輯器逐欄預覽，確認後才使用。 |
-| 空白或 `no-content` | 按模板提供 `quiz/pairs/words/groups/sentences`，並讀 stdout warnings。 |
+| Agent | 目前證據 | 尚待確認 |
+|---|---|---|
+| Codex | 曾以明確指名在新對話讀取四個 Skill；一般 MCP 清單與讀取工具曾測試 | 自動觸發、各帳號及所有平台操作不保證 |
+| OpenCode | 曾在新對話測試 Padlet Skill 的明確指名與自然語句載入 | 本 Skill 各版本及 connector 路徑未逐一實測 |
+| Claude Code | 本機已安裝，當時 OAuth 工作階段過期 | 登入後載入、新對話與工具路徑待實測 |
+| Antigravity | 本機已安裝並確認 CLI 版本 | 技能載入及工具路徑待實測 |
+| Grok Bot | 已納入可攜式設計考量 | 雲端安裝、執行與 MCP 相容性未實測 |
+
+平台方案、介面、權限與工具可能變動。各模式已觀察範圍見 [平台模式](references/platform-modes.md) 與 [驗證紀錄](references/release-validation.md)；不把單次範例延伸成所有功能已驗證。
+
+## 維護與測試
 
 ```bash
 npm test
+git diff --check
 ```
 
-測試不會登入、建立或發布活動。壓力情境見 [skill-evaluations.md](references/skill-evaluations.md)。
+自動化測試不登入、不代替平台成果的人工審查。詳細既有命令、格式與疑難排解見 [CLI 使用手冊](references/cli-guide.md)；平台與 API 使用均依授權及各平台當前條件。不要將密碼、API key、Cookie 或不必要的學生資料放進教材、日誌或版本庫。
 
-## CLI 控制與下一輪錄製
+## 四平台專案
 
-```bash
-tw-edtech-wordwall doctor
-tw-edtech-wordwall validate --input input.json
-tw-edtech-wordwall plan --action activity.create --resource CANARY-activity
-```
+[Wordwall](https://github.com/FW1201/tw-wordwall-skill) · [Padlet](https://github.com/FW1201/tw-padlet-skill) · [Wayground](https://github.com/FW1201/tw-wayground-skill) · [Kahoot](https://github.com/FW1201/tw-kahoot-skill)
 
-請分段錄製模板建立／貼入、編輯、切換模板、列印、公開、分享、嵌入、指派、結果與刪除。每段使用 `CANARY-<timestamp>`，最後核對模板、題數、能見度與活動 ID；不得包含帳密、Cookie、學生姓名、email、結果或分享連結。未錄製的 UI 動作一律由 CLI 阻擋。
-
-## 跨 Agent 安裝診斷
-
-安裝前執行 `node scripts/portable-core/agent-doctor.mjs --agent codex`，其他 Agent 可替換為 `claude`、`antigravity`、`opencode` 或 `other`。診斷結果中的 unknown 需在實際 Agent 與平台確認；詳見 [跨 Agent 指引](references/portable-integration.md)。核心只提供診斷和路由建議，不會自動安裝、登入或執行平台操作。
-
-### 專案範圍安裝
-
-執行 `node scripts/portable-core/install.mjs --agent codex --project <專案目錄>` 預覽；確認結果後加 `--apply`，將完整 Skill 複製到該 Agent 專案技能目錄。已有同名 Skill 時停止，絕不覆蓋；需要同時安裝套件時加 `--with-deps`，使用 `npm ci --ignore-scripts`；完成後重新載入 Agent 並檢查技能發現。安裝器不修改 MCP 設定或登入。
-
-使用 `tw-edtech-wordwall runtime --inventory inventory.json` 將本次 Agent 發現的工具與替代能力送入 CLI，回報動作路由；此命令唯讀，不會替宿主呼叫 connector。工具可見不代表帳號權限已驗證。
-
-專案既有 Skill 的安全升級及回復指引見 [跨 Agent 整合](references/portable-integration.md#專案安裝與升級)。
+MIT License
